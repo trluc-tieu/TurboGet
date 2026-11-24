@@ -1,0 +1,238 @@
+<Window x:Class="TurboGet.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TurboGet — Trình Tăng Tốc Tải File &amp; Torrent"
+        Width="1180"
+        Height="740"
+        MinWidth="900"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgPrimary}"
+        Foreground="{StaticResource TextPrimary}"
+        AllowDrop="True"
+        Drop="Window_Drop"
+        DragOver="Window_DragOver"
+        Closing="Window_Closing">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Top Toolbar -->
+            <RowDefinition Height="*"/>    <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- TOP TOOLBAR -->
+        <Border Grid.Row="0" Background="{StaticResource BgSecondary}" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="0,0,0,1" Padding="14,10">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="⚡ TurboGet" FontSize="17" FontWeight="Bold" Foreground="{StaticResource AccentHoverBrush}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <Button Content="➕ Thêm URL" Style="{StaticResource PrimaryButton}" Click="BtnAddUrl_Click"/>
+                    <Button Content="🧲 Thêm Torrent" Style="{StaticResource ToolbarButton}" Click="BtnAddTorrent_Click"/>
+                    <Separator Width="1" Margin="6,4,12,4" Background="{StaticResource BorderBrushDark}"/>
+                    <Button x:Name="BtnResume" Content="▶ Tiếp tục" Style="{StaticResource ToolbarButton}" Click="BtnResume_Click"/>
+                    <Button x:Name="BtnPause" Content="⏸ Tạm dừng" Style="{StaticResource ToolbarButton}" Click="BtnPause_Click"/>
+                    <Button x:Name="BtnDelete" Content="🗑 Xóa" Style="{StaticResource ToolbarButton}" Click="BtnDelete_Click"/>
+                    <Button x:Name="BtnOpenFolder" Content="📂 Mở thư mục" Style="{StaticResource ToolbarButton}" Click="BtnOpenFolder_Click"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Button Content="⚙ Cài đặt" Style="{StaticResource ToolbarButton}" Margin="0" Click="BtnSettings_Click"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- MAIN BODY -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="205"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT SIDEBAR -->
+            <Border Grid.Column="0" Background="{StaticResource BgSecondary}" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="0,0,1,0">
+                <StackPanel Margin="0,12,0,0">
+                    <TextBlock Text="DANH MỤC" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="16,4,16,8"/>
+                    <RadioButton x:Name="NavAll" Content="📋 Tất cả" Style="{StaticResource SidebarButton}" IsChecked="True" Tag="All" Checked="NavCategory_Checked"/>
+                    <RadioButton x:Name="NavDownloading" Content="⬇ Đang tải" Style="{StaticResource SidebarButton}" Tag="Downloading" Checked="NavCategory_Checked"/>
+                    <RadioButton x:Name="NavCompleted" Content="✅ Hoàn thành" Style="{StaticResource SidebarButton}" Tag="Completed" Checked="NavCategory_Checked"/>
+                    <RadioButton x:Name="NavPaused" Content="⏸ Tạm dừng" Style="{StaticResource SidebarButton}" Tag="Paused" Checked="NavCategory_Checked"/>
+
+                    <TextBlock Text="NGUỒN TẢI" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="16,18,16,8"/>
+                    <RadioButton x:Name="NavHttp" Content="🌐 HTTP / Thường" Style="{StaticResource SidebarButton}" Tag="Http" Checked="NavCategory_Checked"/>
+                    <RadioButton x:Name="NavTorrent" Content="🧲 Torrent / Magnet" Style="{StaticResource SidebarButton}" Tag="Torrent" Checked="NavCategory_Checked"/>
+
+                    <Border Margin="12,24,12,0" Padding="10" Background="#0F172A" CornerRadius="8" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="💡 Mẹo nhanh" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,0,4"/>
+                            <TextBlock Text="• Copy link rồi bấm 'Thêm URL' để tự điền.&#x0a;• Kéo thả file .torrent vào cửa sổ để tải ngay."
+                                       FontSize="11" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- RIGHT CONTENT: DOWNLOAD LIST + DETAIL INSPECTOR -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="180"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="245" MinHeight="140"/>
+                </Grid.RowDefinitions>
+
+                <!-- DOWNLOADS DATAGRID -->
+                <DataGrid x:Name="GridDownloads"
+                          Grid.Row="0"
+                          SelectionChanged="GridDownloads_SelectionChanged"
+                          MouseDoubleClick="GridDownloads_MouseDoubleClick">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="▶ Bắt đầu / Tiếp tục" Click="BtnResume_Click"/>
+                            <MenuItem Header="⏸ Tạm dừng" Click="BtnPause_Click"/>
+                            <Separator/>
+                            <MenuItem Header="📄 Mở file" Click="MenuOpenFile_Click"/>
+                            <MenuItem Header="📂 Mở thư mục chứa file" Click="BtnOpenFolder_Click"/>
+                            <MenuItem Header="📋 Sao chép đường dẫn nguồn" Click="MenuCopySource_Click"/>
+                            <Separator/>
+                            <MenuItem Header="🗑 Xóa khỏi danh sách" Click="BtnDelete_Click"/>
+                            <MenuItem Header="🔥 Xóa kèm file trên đĩa" Click="MenuDeleteWithFiles_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tên file" Binding="{Binding Name}" Width="2*" MinWidth="200"/>
+                        <DataGridTextColumn Header="Loại" Binding="{Binding TypeText}" Width="68"/>
+                        <DataGridTextColumn Header="Kích thước" Binding="{Binding FormattedSize}" Width="155"/>
+                        <DataGridTemplateColumn Header="Tiến độ" Width="175">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid VerticalAlignment="Center">
+                                        <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Minimum="0" Maximum="100" Height="18"/>
+                                        <TextBlock Text="{Binding FormattedPercent}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Tốc độ" Binding="{Binding FormattedSpeed}" Width="100"/>
+                        <DataGridTextColumn Header="Còn lại" Binding="{Binding EtaText}" Width="78"/>
+                        <DataGridTextColumn Header="Kết nối" Binding="{Binding ConnectionInfoText}" Width="84"/>
+                        <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusText}" Width="130"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- SPLITTER -->
+                <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrushDark}"/>
+
+                <!-- BOTTOM INSPECTOR PANEL (IDM SEGMENT VIEW / TORRENT DETAIL VIEW) -->
+                <Border Grid.Row="2" Background="{StaticResource BgSecondary}" Padding="14,10">
+                    <Grid>
+                        <!-- Empty state -->
+                        <TextBlock x:Name="TxtNoSelection"
+                                   Text="Chọn một mục tải xuống ở trên để xem chi tiết phân luồng (HTTP) hoặc danh sách file &amp; Peer/Seed (Torrent)."
+                                   Foreground="{StaticResource TextSecondary}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   FontSize="13"/>
+
+                        <!-- HTTP DETAIL PANEL -->
+                        <Grid x:Name="PanelHttpDetail" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0" Margin="0,0,0,8">
+                                <TextBlock x:Name="TxtHttpTitle" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="TxtHttpMeta" DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource AccentHoverBrush}" Margin="12,0,0,0"/>
+                            </DockPanel>
+
+                            <!-- IDM-style Segmented Bar -->
+                            <Border Grid.Row="1" Background="#0B1220" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="1" CornerRadius="4" Padding="3" Margin="0,0,0,8">
+                                <ItemsControl x:Name="ListSegmentBars">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Minimum="0" Maximum="100"
+                                                         Height="14" Margin="1,0" BorderThickness="0"
+                                                         Foreground="{StaticResource SuccessBrush}" Background="#1E293B"
+                                                         ToolTip="{Binding ThreadLabel}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+
+                            <!-- Per-Thread Table -->
+                            <DataGrid x:Name="GridSegments" Grid.Row="2" RowHeight="28">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Luồng" Binding="{Binding ThreadLabel}" Width="90"/>
+                                    <DataGridTemplateColumn Header="Tiến độ đoạn" Width="180">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Minimum="0" Maximum="100" Height="12"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Đã tải / Phân đoạn" Binding="{Binding FormattedProgress}" Width="180"/>
+                                    <DataGridTextColumn Header="Tốc độ" Binding="{Binding FormattedSpeed}" Width="105"/>
+                                    <DataGridTextColumn Header="Trạng thái" Binding="{Binding StatusText}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+
+                        <!-- TORRENT DETAIL PANEL -->
+                        <Grid x:Name="PanelTorrentDetail" Visibility="Collapsed">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <DockPanel Grid.Row="0" Margin="0,0,0,6">
+                                <TextBlock x:Name="TxtTorrentTitle" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="TxtTorrentPeers" DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" Margin="12,0,0,0"/>
+                            </DockPanel>
+
+                            <TextBlock x:Name="TxtTorrentPath" Grid.Row="1" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,8" TextTrimming="CharacterEllipsis"/>
+
+                            <DataGrid x:Name="GridTorrentFiles" Grid.Row="2" RowHeight="28">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="File trong Torrent" Binding="{Binding FilePath}" Width="2*"/>
+                                    <DataGridTextColumn Header="Kích thước" Binding="{Binding FormattedSize}" Width="110"/>
+                                    <DataGridTemplateColumn Header="Tiến độ" Width="160">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Grid VerticalAlignment="Center">
+                                                    <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}" Minimum="0" Maximum="100" Height="14"/>
+                                                    <TextBlock Text="{Binding FormattedPercent}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="10" Foreground="White"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- BOTTOM STATUS BAR -->
+        <Border Grid.Row="2" Background="#0B1220" BorderBrush="{StaticResource BorderBrushDark}" BorderThickness="0,1,0,0" Padding="14,6">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <TextBlock x:Name="TxtStatusLeft" Text="Sẵn sàng" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,18,0"/>
+                    <TextBlock x:Name="TxtBridgeStatus" Text="🌐 Extension Bridge: Đang khởi động..." FontSize="12" Foreground="{StaticResource SuccessBrush}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                    <TextBlock x:Name="TxtStatusLimit" Text="Giới hạn: Không giới hạn" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,18,0"/>
+                    <TextBlock x:Name="TxtStatusDownSpeed" Text="⬇ 0 B/s" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,14,0"/>
+                    <TextBlock x:Name="TxtStatusUpSpeed" Text="⬆ 0 B/s" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource SuccessBrush}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

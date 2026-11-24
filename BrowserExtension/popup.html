@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TurboGet</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">⚡ TurboGet</div>
+      <div id="statusBadge" class="badge badge-checking">Đang kiểm tra...</div>
+    </header>
+
+    <!-- Live Download Progress Section -->
+    <section class="card">
+      <div class="section-header">
+        <div class="label">Tiến trình tải</div>
+        <div id="totalSpeedBadge" class="speed-pill">⬇ 0 B/s</div>
+      </div>
+      <div id="downloadList" class="download-list">
+        <div class="empty-state">Chưa có mục tải nào.</div>
+      </div>
+    </section>
+
+    <!-- Quick Send -->
+    <section class="card">
+      <div class="label" style="margin-bottom: 6px;">Gửi nhanh URL / Magnet</div>
+      <div class="input-group">
+        <input type="text" id="txtQuickUrl" placeholder="Dán link http://, https:// hoặc magnet:..." />
+        <button id="btnSend">Tải</button>
+      </div>
+      <div id="sendFeedback" class="feedback"></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="card">
+      <div class="row">
+        <div>
+          <div class="label">Tự động bắt link tải</div>
+          <div class="hint">Chuyển tải xuống trình duyệt sang TurboGet</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="chkAutoCapture" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="row row-top-border">
+        <label for="selMinSize" class="label">Kích thước tối thiểu</label>
+        <select id="selMinSize">
+          <option value="0">Tất cả file</option>
+          <option value="1">&gt;= 1 MB</option>
+          <option value="5">&gt;= 5 MB</option>
+          <option value="10">&gt;= 10 MB</option>
+          <option value="50">&gt;= 50 MB</option>
+        </select>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Chuột phải vào bất kỳ link nào → <b>⚡ Tải bằng TurboGet</b>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

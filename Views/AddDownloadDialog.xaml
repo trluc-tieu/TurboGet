@@ -1,0 +1,66 @@
+<Window x:Class="TurboGet.Views.AddDownloadDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Thêm tải xuống mới"
+        Width="560"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BgSecondary}"
+        Foreground="{StaticResource TextPrimary}">
+    <StackPanel Margin="20">
+        <!-- Mode switcher -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+            <RadioButton x:Name="RbHttp" Content="🌐 Tải thường (HTTP / HTTPS)" IsChecked="True"
+                         Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold"
+                         Margin="0,0,20,0" Checked="ModeChanged"/>
+            <RadioButton x:Name="RbTorrent" Content="🧲 Tải Torrent (.torrent / Magnet)"
+                         Foreground="{StaticResource TextPrimary}" FontSize="13" FontWeight="SemiBold"
+                         Checked="ModeChanged"/>
+        </StackPanel>
+
+        <!-- Source Input -->
+        <TextBlock x:Name="LblSource" Text="Đường dẫn tải xuống (URL):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="TxtSource" Grid.Column="0" Height="34"/>
+            <Button x:Name="BtnBrowseTorrent" Grid.Column="1" Content="Chọn .torrent..."
+                    Style="{StaticResource ToolbarButton}" Margin="8,0,0,0"
+                    Visibility="Collapsed" Click="BtnBrowseTorrent_Click"/>
+        </Grid>
+
+        <!-- Save Directory -->
+        <TextBlock Text="Thư mục lưu file:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="TxtSaveDir" Grid.Column="0" Height="34"/>
+            <Button Grid.Column="1" Content="Chọn thư mục..." Style="{StaticResource ToolbarButton}"
+                    Margin="8,0,0,0" Click="BtnBrowseFolder_Click"/>
+        </Grid>
+
+        <!-- Thread Count (HTTP only) -->
+        <StackPanel x:Name="PanelThreads" Margin="0,0,0,16">
+            <DockPanel Margin="0,0,0,6">
+                <TextBlock Text="Số luồng tải song song (tăng tốc kiểu IDM):" Foreground="{StaticResource TextSecondary}"/>
+                <TextBlock x:Name="LblThreadValue" Text="8 luồng" Foreground="{StaticResource AccentHoverBrush}"
+                           FontWeight="Bold" HorizontalAlignment="Right"/>
+            </DockPanel>
+            <Slider x:Name="SliderThreads" Minimum="1" Maximum="32" Value="8" IsSnapToTickEnabled="True"
+                    TickFrequency="1" ValueChanged="SliderThreads_ValueChanged"/>
+            <TextBlock Text="Khuyến nghị: 8 - 16 luồng cho tốc độ tối ưu. Tự động chuyển 1 luồng nếu server không hỗ trợ chia đoạn."
+                       Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+            <Button Content="Hủy" Style="{StaticResource ToolbarButton}" Width="90" Click="BtnCancel_Click"/>
+            <Button Content="Bắt đầu tải" Style="{StaticResource PrimaryButton}" Width="120" Margin="0" Click="BtnStart_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
