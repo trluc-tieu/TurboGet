@@ -7,7 +7,102 @@ const DEFAULT_SETTINGS = {
 let fastPollTimer = null;
 let hadActiveDownloads = false;
 let clearDoneBadgeTimer = null;
+let lastRenderedKey = "";
 const handledDownloadIds = new Set();
+
+const DEFAULT_ICON_PATHS = {
+  16: "icons/icon16.png",
+  48: "icons/icon48.png",
+  128: "icons/icon128.png"
+};
+
+function drawProgressRingIcon(size, progressPercent, isDone = false) {
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d");
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringWidth = Math.max(2.2, size * 0.125);
+  const ringRadius = cx - ringWidth / 2 - 0.5;
+  const innerRadius = Math.max(1, ringRadius - ringWidth / 2 - 0.8);
+
+  ctx.clearRect(0, 0, size, size);
+
+  // Inner circle background
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  if (isDone) {
+    grad.addColorStop(0, "#16a34a");
+    grad.addColorStop(1, "#15803d");
+  } else {
+    grad.addColorStop(0, "#0f172a");
+    grad.addColorStop(1, "#1e3a8a");
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Outer track ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = isDone ? "#22c55e" : "rgba(148, 163, 184, 0.35)";
+  ctx.lineWidth = ringWidth;
+  ctx.stroke();
+
+  // Active circular progress arc (starts from 12 o'clock)
+  const pct = Math.max(0, Math.min(100, progressPercent));
+  if (!isDone && pct > 0) {
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (pct / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, startAngle, endAngle);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = ringWidth;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+
+  // White lightning bolt centered inside the ring
+  const scale = innerRadius * 1.45;
+  const ox = cx - scale / 2;
+  const oy = cy - scale / 2;
+  ctx.beginPath();
+  ctx.moveTo(ox + scale * 0.57, oy + scale * 0.12);
+  ctx.lineTo(ox + scale * 0.25, oy + scale * 0.55);
+  ctx.lineTo(ox + scale * 0.49, oy + scale * 0.55);
+  ctx.lineTo(ox + scale * 0.41, oy + scale * 0.88);
+  ctx.lineTo(ox + scale * 0.75, oy + scale * 0.43);
+  ctx.lineTo(ox + scale * 0.51, oy + scale * 0.43);
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function setCircularProgressIcon(progressPercent, isDone = false) {
+  const bucket = isDone ? "done" : `p_${Math.round(progressPercent)}`;
+  if (lastRenderedKey === bucket) return;
+  lastRenderedKey = bucket;
+
+  try {
+    chrome.action.setBadgeText({ text: "" });
+    chrome.action.setIcon({
+      imageData: {
+        16: drawProgressRingIcon(16, progressPercent, isDone),
+        32: drawProgressRingIcon(32, progressPercent, isDone)
+      }
+    });
+  } catch {
+    // Fallback ignored
+  }
+}
+
+function resetDefaultIcon() {
+  if (lastRenderedKey === "default") return;
+  lastRenderedKey = "default";
+  chrome.action.setBadgeText({ text: "" });
+  chrome.action.setIcon({ path: DEFAULT_ICON_PATHS });
+}
 
 // Setup context menus and background alarm
 function createContextMenus() {
@@ -81,14 +176,14 @@ async function getDownloadsSnapshot(timeoutMs = 1000) {
   return await fetchJson("/api/downloads", { method: "GET" }, timeoutMs);
 }
 
-// Update Chrome/Edge toolbar icon badge with live download progress
+// Update Chrome/Edge toolbar icon with circular progress ring (no badge text covering the icon)
 async function pollDownloadsForBadge() {
   const data = await getDownloadsSnapshot(900);
 
   if (!data || !data.ok) {
     stopFastPolling();
     hadActiveDownloads = false;
-    chrome.action.setBadgeText({ text: "" });
+    resetDefaultIcon();
     chrome.action.setTitle({ title: "TurboGet — Chưa kết nối (hãy mở TurboGet.exe)" });
     return;
   }
@@ -101,9 +196,8 @@ async function pollDownloadsForBadge() {
       clearDoneBadgeTimer = null;
     }
 
-    const pct = Math.max(0, Math.min(99, Math.round(data.averageProgress || 0)));
-    chrome.action.setBadgeText({ text: `${pct}%` });
-    chrome.action.setBadgeBackgroundColor({ color: "#0284c7" });
+    const pct = Math.max(0, Math.min(100, Math.round(data.averageProgress || 0)));
+    setCircularProgressIcon(pct, false);
     chrome.action.setTitle({
       title: `TurboGet — Đang tải ${activeCount} file (${pct}% • ${data.totalSpeedText || "0 B/s"})`
     });
@@ -112,15 +206,14 @@ async function pollDownloadsForBadge() {
     stopFastPolling();
     if (hadActiveDownloads) {
       hadActiveDownloads = false;
-      chrome.action.setBadgeText({ text: "✓" });
-      chrome.action.setBadgeBackgroundColor({ color: "#16a34a" });
+      setCircularProgressIcon(100, true);
       chrome.action.setTitle({ title: "TurboGet — Tải hoàn thành!" });
       clearDoneBadgeTimer = setTimeout(() => {
-        chrome.action.setBadgeText({ text: "" });
+        resetDefaultIcon();
         chrome.action.setTitle({ title: "TurboGet — Sẵn sàng bắt link" });
       }, 5000);
     } else {
-      chrome.action.setBadgeText({ text: "" });
+      resetDefaultIcon();
       chrome.action.setTitle({ title: "TurboGet — Sẵn sàng bắt link" });
     }
   }
@@ -308,11 +401,8 @@ async function tryInterceptDownload(downloadItem, knownFilename = "") {
   }
 }
 
-// Auto-intercept browser downloads (both onCreated and onDeterminingFilename for dynamic .torrent links)
-chrome.downloads.onCreated.addListener((downloadItem) => {
-  tryInterceptDownload(downloadItem);
-});
-
+// Intercept in onDeterminingFilename so real filename (e.g. from Content-Disposition like *.torrent),
+// MIME type, and fileSize are already resolved by Chrome/Edge.
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   suggest();
   if (!handledDownloadIds.has(downloadItem.id)) {

@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = $"TurboGet {UpdateCheckerService.GetCurrentVersionText()} — Trình Tăng Tốc Tải File & Torrent";
 
         _manager = new DownloadManagerService();
         _downloadsView = CollectionViewSource.GetDefaultView(_manager.Downloads);
@@ -71,9 +72,16 @@ public partial class MainWindow : Window
             var initialTorrent = App.StartupTorrentArg;
             Loaded += async (_, _) =>
             {
-                var added = await _manager.AddTorrentDownloadAsync(initialTorrent);
-                _downloadsView.Refresh();
-                GridDownloads.SelectedItem = added;
+                if (_manager.Settings.AskSaveLocationForTorrent)
+                {
+                    await ShowAddDialogAsync(startInTorrentMode: true, prefillSource: initialTorrent);
+                }
+                else
+                {
+                    var added = await _manager.AddTorrentDownloadAsync(initialTorrent);
+                    _downloadsView.Refresh();
+                    GridDownloads.SelectedItem = added;
+                }
             };
         }
 
@@ -93,7 +101,11 @@ public partial class MainWindow : Window
                         Forms.ToolTipIcon.Info);
                 }
             },
-            onFocusRequested: RestoreFromTray);
+            onFocusRequested: RestoreFromTray,
+            onTorrentPromptRequested: async torrentSource =>
+            {
+                await ShowAddDialogAsync(startInTorrentMode: true, prefillSource: torrentSource);
+            });
         _bridgeServer.Start();
         TxtBridgeStatus.Text = _bridgeServer.StatusText;
 
@@ -234,8 +246,12 @@ public partial class MainWindow : Window
 
     private async Task ShowAddDialogAsync(bool startInTorrentMode, string? prefillSource = null)
     {
+        var defaultDir = startInTorrentMode && !string.IsNullOrWhiteSpace(_manager.Settings.DefaultTorrentSaveDirectory)
+            ? _manager.Settings.DefaultTorrentSaveDirectory
+            : _manager.Settings.DefaultSaveDirectory;
+
         var dialog = new AddDownloadDialog(
-            _manager.Settings.DefaultSaveDirectory,
+            defaultDir,
             _manager.Settings.DefaultThreadCount,
             startInTorrentMode,
             prefillSource)
@@ -371,6 +387,67 @@ public partial class MainWindow : Window
     {
         if (!Directory.Exists(path)) return;
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
+    }
+
+    private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        BtnCheckUpdate.IsEnabled = false;
+        BtnCheckUpdate.Content = "⏳ Đang kiểm tra...";
+        try
+        {
+            var result = await UpdateCheckerService.CheckForUpdateAsync();
+            if (!result.Success)
+            {
+                MessageBox.Show(this, result.ErrorMessage ?? "Không thể kiểm tra cập nhật.", "Kiểm tra cập nhật",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!result.IsUpdateAvailable)
+            {
+                MessageBox.Show(
+                    this,
+                    $"Bạn đang sử dụng phiên bản mới nhất ({UpdateCheckerService.GetCurrentVersionText()})!",
+                    "Đã cập nhật mới nhất",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var notes = string.IsNullOrWhiteSpace(result.ReleaseNotes)
+                ? ""
+                : $"\n\nThay đổi mới:\n{(result.ReleaseNotes.Length > 450 ? result.ReleaseNotes[..450] + "..." : result.ReleaseNotes)}";
+
+            var prompt = $"Đã có phiên bản mới: v{result.LatestVersion} (hiện tại: v{result.CurrentVersion}).{notes}\n\nBạn có muốn tải bản cập nhật về ngay không?";
+
+            var answer = MessageBox.Show(
+                this,
+                prompt,
+                "Có bản cập nhật mới!",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (answer == MessageBoxResult.Yes)
+            {
+                if (!string.IsNullOrWhiteSpace(result.DownloadUrl))
+                {
+                    var added = await _manager.AddHttpDownloadAsync(
+                        url: result.DownloadUrl,
+                        fileName: result.AssetName);
+                    _downloadsView.Refresh();
+                    GridDownloads.SelectedItem = added;
+                }
+                else if (!string.IsNullOrWhiteSpace(result.ReleasePageUrl))
+                {
+                    Process.Start(new ProcessStartInfo(result.ReleasePageUrl) { UseShellExecute = true });
+                }
+            }
+        }
+        finally
+        {
+            BtnCheckUpdate.Content = "🔄 Kiểm tra cập nhật";
+            BtnCheckUpdate.IsEnabled = true;
+        }
     }
 
     private async void BtnSettings_Click(object sender, RoutedEventArgs e)

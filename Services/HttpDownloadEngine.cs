@@ -384,7 +384,10 @@ public sealed class HttpDownloadEngine : IDisposable
                 using var request = CreateRequest(HttpMethod.Get, item);
                 long writeOffset = 0;
 
-                if (useRange)
+                // Only send Range header when downloading multiple segments or resuming mid-file.
+                // Sending Range: bytes=0-(len-1) on a 1-segment fresh download breaks some PHP download scripts.
+                bool sendRangeHeader = useRange && (totalSegments > 1 || alreadyDownloaded > 0);
+                if (sendRangeHeader)
                 {
                     long rangeStart = seg.StartByte + alreadyDownloaded;
                     long rangeEnd = seg.EndByte;
@@ -433,6 +436,12 @@ public sealed class HttpDownloadEngine : IDisposable
                             bytesInWindow = 0;
                         }
                     }
+                }
+
+                // Verify we received the full expected segment if size is known
+                if (seg.TotalBytes > 0 && Volatile.Read(ref segmentDownloaded[idx]) < seg.TotalBytes)
+                {
+                    throw new IOException($"Kết nối bị ngắt sớm ({Volatile.Read(ref segmentDownloaded[idx])}/{seg.TotalBytes} bytes).");
                 }
 
                 segmentStatus[idx] = "Hoàn thành";

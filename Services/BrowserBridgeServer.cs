@@ -17,6 +17,7 @@ public sealed class BrowserBridgeServer : IDisposable
     private readonly DownloadManagerService _manager;
     private readonly Action<DownloadItem>? _onDownloadAdded;
     private readonly Action? _onFocusRequested;
+    private readonly Func<string, Task>? _onTorrentPromptRequested;
     private readonly HttpListener _listener = new();
     private readonly CancellationTokenSource _cts = new();
     private Task? _listenTask;
@@ -27,11 +28,13 @@ public sealed class BrowserBridgeServer : IDisposable
     public BrowserBridgeServer(
         DownloadManagerService manager,
         Action<DownloadItem>? onDownloadAdded = null,
-        Action? onFocusRequested = null)
+        Action? onFocusRequested = null,
+        Func<string, Task>? onTorrentPromptRequested = null)
     {
         _manager = manager;
         _onDownloadAdded = onDownloadAdded;
         _onFocusRequested = onFocusRequested;
+        _onTorrentPromptRequested = onTorrentPromptRequested;
     }
 
     public void Start()
@@ -244,6 +247,32 @@ public sealed class BrowserBridgeServer : IDisposable
                 bool isTorrent = isLocalTorrent || isMagnet || downloadedTorrentFile is not null;
                 string torrentSource = downloadedTorrentFile ?? url;
 
+                if (isTorrent && _manager.Settings.AskSaveLocationForTorrent && _onTorrentPromptRequested is not null)
+                {
+                    var uiDispatcher = Application.Current?.Dispatcher;
+                    if (uiDispatcher is not null)
+                    {
+                        _ = uiDispatcher.InvokeAsync(async () =>
+                        {
+                            _onFocusRequested?.Invoke();
+                            await _onTorrentPromptRequested(torrentSource);
+                        });
+                    }
+
+                    string displayName = isMagnet
+                        ? "Link Magnet"
+                        : Path.GetFileNameWithoutExtension(torrentSource);
+
+                    await WriteJsonAsync(res, 200, new
+                    {
+                        ok = true,
+                        name = displayName,
+                        type = "torrent",
+                        prompting = true
+                    });
+                    return;
+                }
+
                 DownloadItem? added = null;
                 var dispatcher = Application.Current?.Dispatcher;
                 if (dispatcher is not null)
@@ -304,7 +333,11 @@ public sealed class BrowserBridgeServer : IDisposable
                 "Torrents");
             Directory.CreateDirectory(torrentsDir);
 
-            using var handler = new SocketsHttpHandler { AllowAutoRedirect = true };
+            using var handler = new SocketsHttpHandler
+            {
+                AllowAutoRedirect = true,
+                AutomaticDecompression = DecompressionMethods.All
+            };
             using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
 

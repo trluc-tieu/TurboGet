@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TurboGet — Tăng Tốc Tải File & Torrent",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "Tự động bắt link tải xuống từ Chrome/Edge, hiện tiến trình tải trên thanh công cụ và gửi sang TurboGet (HTTP đa luồng & Magnet Torrent).",
   "permissions": [
     "downloads",

@@ -100,7 +100,10 @@ public sealed class DownloadManagerService : IAsyncDisposable
 
     public async Task<DownloadItem> AddTorrentDownloadAsync(string torrentPathOrMagnet, string? saveDir = null, bool startImmediately = true)
     {
-        var dir = string.IsNullOrWhiteSpace(saveDir) ? Settings.DefaultSaveDirectory : saveDir;
+        var defaultTorrentDir = string.IsNullOrWhiteSpace(Settings.DefaultTorrentSaveDirectory)
+            ? Settings.DefaultSaveDirectory
+            : Settings.DefaultTorrentSaveDirectory;
+        var dir = string.IsNullOrWhiteSpace(saveDir) ? defaultTorrentDir : saveDir;
         var source = torrentPathOrMagnet.Trim();
 
         string initialName = source.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase)
@@ -191,6 +194,8 @@ public sealed class DownloadManagerService : IAsyncDisposable
     {
         Settings = newSettings;
         Directory.CreateDirectory(Settings.DefaultSaveDirectory);
+        if (!string.IsNullOrWhiteSpace(Settings.DefaultTorrentSaveDirectory))
+            Directory.CreateDirectory(Settings.DefaultTorrentSaveDirectory);
         StartupHelper.SetEnabled(Settings.StartWithWindows);
         SaveSettings();
         await _torrentEngine.ApplySpeedLimitAsync(Settings.SpeedLimitKbps);

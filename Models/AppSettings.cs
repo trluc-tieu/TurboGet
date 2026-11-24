@@ -9,6 +9,14 @@ public class AppSettings
         "Downloads",
         "TurboGet");
 
+    public string DefaultTorrentSaveDirectory { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "Downloads",
+        "TurboGet",
+        "Torrents");
+
+    public bool AskSaveLocationForTorrent { get; set; } = true;
+
     public int DefaultThreadCount { get; set; } = 8;
 
     /// <summary>

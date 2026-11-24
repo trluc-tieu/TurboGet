@@ -9,8 +9,8 @@
         Background="{StaticResource BgSecondary}"
         Foreground="{StaticResource TextPrimary}">
     <StackPanel Margin="20">
-        <TextBlock Text="Thư mục lưu mặc định:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
-        <Grid Margin="0,0,0,14">
+        <TextBlock Text="Thư mục lưu file HTTP mặc định:" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+        <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -18,6 +18,17 @@
             <TextBox x:Name="TxtDefaultDir" Grid.Column="0" Height="34"/>
             <Button Grid.Column="1" Content="Chọn..." Style="{StaticResource ToolbarButton}"
                     Margin="8,0,0,0" Click="BtnBrowse_Click"/>
+        </Grid>
+
+        <TextBlock Text="Thư mục lưu Torrent mặc định (nên chọn ổ dung lượng lớn):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="TxtTorrentDir" Grid.Column="0" Height="34"/>
+            <Button Grid.Column="1" Content="Chọn..." Style="{StaticResource ToolbarButton}"
+                    Margin="8,0,0,0" Click="BtnBrowseTorrent_Click"/>
         </Grid>
 
         <DockPanel Margin="0,0,0,6">
@@ -30,6 +41,12 @@
 
         <TextBlock Text="Giới hạn tốc độ tải (KB/s, nhập 0 = Không giới hạn):" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
         <TextBox x:Name="TxtSpeedLimit" Height="34" Margin="0,0,0,14"/>
+
+        <CheckBox x:Name="ChkAskTorrentLocation"
+                  Content="Hỏi nơi lưu mỗi khi thêm Torrent mới (từ trình duyệt / mở file .torrent)"
+                  Foreground="{StaticResource TextPrimary}"
+                  FontSize="13"
+                  Margin="0,0,0,10"/>
 
         <CheckBox x:Name="ChkStopSeeding"
                   Content="Tự động dừng Seed khi tải xong Torrent (giống IDM)"
